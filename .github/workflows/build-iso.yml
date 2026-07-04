@@ -1,0 +1,110 @@
+name: Build Trimangees OS ISO
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y \
+          debootstrap squashfs-tools xorriso \
+          grub-pc-bin grub-efi-amd64-bin mtools \
+          libwebkit2gtk-4.1-dev libgtk-3-dev \
+          pkg-config build-essential
+
+    - name: Install Rust
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Build shell binary
+      run: |
+        cd shell
+        cargo build --release
+
+    - name: Bootstrap Debian
+      run: |
+        mkdir -p build/chroot
+        sudo debootstrap --arch=amd64 bookworm build/chroot http://deb.debian.org/debian
+
+    - name: Install OS packages
+      run: |
+        sudo chroot build/chroot /bin/bash -c "
+          apt-get update -qq &&
+          apt-get install -y \
+            lightdm lightdm-gtk-greeter \
+            xorg openbox \
+            libwebkit2gtk-4.1-dev \
+            nodejs npm \
+            alsa-utils network-manager \
+            live-boot live-tools
+        "
+
+    - name: Install binary and assets
+      run: |
+        sudo cp shell/target/release/trimangees-shell build/chroot/usr/bin/
+        sudo chmod +x build/chroot/usr/bin/trimangees-shell
+        sudo mkdir -p build/chroot/opt/trimangees
+        sudo cp -r browser build/chroot/opt/trimangees/
+        sudo mkdir -p build/chroot/opt/trimangees/shell-assets
+        sudo cp -r shell/assets build/chroot/opt/trimangees/shell-assets/
+
+    - name: Configure session
+      run: |
+        sudo mkdir -p build/chroot/usr/share/xsessions
+        sudo cp trimangees.desktop build/chroot/usr/share/xsessions/
+
+        sudo tee build/chroot/etc/profile.d/trimangees.sh << 'EOF'
+        export TRIMANGEES_BROWSER_DIR=/opt/trimangees/browser
+        export TRIMANGEES_ASSETS_DIR=/opt/trimangees/shell-assets/apps
+        EOF
+
+        sudo mkdir -p build/chroot/etc/lightdm
+        sudo tee build/chroot/etc/lightdm/lightdm.conf << 'EOF'
+        [SeatDefaults]
+        autologin-user=root
+        autologin-user-timeout=0
+        user-session=trimangees
+        EOF
+
+        sudo tee build/chroot/root/.xinitrc << 'EOF'
+        #!/bin/bash
+        source /etc/profile.d/trimangees.sh
+        exec /usr/bin/trimangees-shell
+        EOF
+        sudo chmod +x build/chroot/root/.xinitrc
+
+    - name: Build ISO
+      run: |
+        sudo mkdir -p build/iso/live build/iso/boot/grub
+        sudo mksquashfs build/chroot build/iso/live/filesystem.squashfs -comp xz -b 1M
+        KVER=$(ls build/chroot/boot/vmlinuz-* | sort | tail -1)
+        sudo cp $KVER build/iso/boot/vmlinuz
+        sudo cp build/chroot/boot/initrd.img-$(basename $KVER | sed 's/vmlinuz-//') build/iso/boot/initrd
+        sudo tee build/iso/boot/grub/grub.cfg << 'EOF'
+        set default=0
+        set timeout=3
+        menuentry "Trimangees OS" {
+            linux /boot/vmlinuz boot=live quiet splash
+            initrd /boot/initrd
+        }
+        EOF
+        sudo grub-mkrescue -o trimangees-os.iso build/iso -- -volid TrimangeesOS
+
+    - name: Upload ISO
+      uses: actions/upload-artifact@v4
+      with:
+        name: trimangees-os-iso
+        path: trimangees-os.iso
+        retention-days: 7
