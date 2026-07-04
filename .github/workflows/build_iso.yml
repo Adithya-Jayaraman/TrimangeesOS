@@ -33,8 +33,9 @@ jobs:
         cd shell
         cargo build --release
 
-    - name: Bootstrap Debian
+- name: Bootstrap Debian
       run: |
+        mkdir -p build/chroot
         sudo debootstrap --arch=amd64 bookworm build/chroot http://deb.debian.org/debian
 
     - name: Install OS packages
