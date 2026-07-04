@@ -51,8 +51,9 @@ jobs:
             live-boot live-tools
         "
 
-    - name: Install binary and assets
+- name: Install binary and assets
       run: |
+        ls shell/target/release/
         sudo cp shell/target/release/trimangees-shell build/chroot/usr/bin/
         sudo chmod +x build/chroot/usr/bin/trimangees-shell
         sudo mkdir -p build/chroot/opt/trimangees
