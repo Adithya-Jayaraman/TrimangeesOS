@@ -1,0 +1,5 @@
+[Desktop Entry]
+Name=Trimangees OS
+Comment=Trimangees Desktop Shell
+Exec=/usr/bin/trimangees-shell
+Type=XSession

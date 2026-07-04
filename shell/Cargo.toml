@@ -1,0 +1,10 @@
+[package]
+name = "trimangees-shell"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+winit    = "0.30"
+pixels   = "0.15"
+ab_glyph = "0.2"
+wry = { version = "0.44", default-features = false, features = ["protocol", "os-webview"] }
