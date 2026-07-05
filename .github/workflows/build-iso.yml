@@ -29,7 +29,7 @@ jobs:
       run: mkdir -p build/chroot && sudo debootstrap --arch=amd64 bookworm build/chroot http://deb.debian.org/debian
 
     - name: Install OS packages
-      run: sudo chroot build/chroot apt-get update -qq && sudo chroot build/chroot apt-get install -y lightdm xorg openbox libwebkit2gtk-4.1-dev nodejs npm live-boot live-tools
+      run: sudo chroot build/chroot apt-get update -qq && sudo chroot build/chroot apt-get install -y lightdm lightdm-gtk-greeter xorg openbox libwebkit2gtk-4.1-dev nodejs npm live-boot live-tools xdg-utils xterm
 
     - name: Install kernel
       run: |
@@ -38,7 +38,7 @@ jobs:
 
     - name: Install binary and assets
       run: |
-        find . -name "trimangees-shell" -type f -name "trimangees-shell" -type f | head -5 && sudo cp target/release/trimangees-shell build/chroot/usr/bin/trimangees-shell
+        sudo cp target/release/trimangees-shell build/chroot/usr/bin/trimangees-shell
         sudo chmod +x build/chroot/usr/bin/trimangees-shell
         sudo mkdir -p build/chroot/opt/trimangees
         sudo cp -r browser build/chroot/opt/trimangees/
@@ -50,9 +50,11 @@ jobs:
         sudo cp trimangees.desktop build/chroot/usr/share/xsessions/
         printf 'export TRIMANGEES_BROWSER_DIR=/opt/trimangees/browser\nexport TRIMANGEES_ASSETS_DIR=/opt/trimangees/assets/apps\n' | sudo tee build/chroot/etc/profile.d/trimangees.sh
         sudo mkdir -p build/chroot/etc/lightdm
-        printf '[SeatDefaults]\nautologin-user=root\nautologin-user-timeout=0\nuser-session=trimangees\n' | sudo tee build/chroot/etc/lightdm/lightdm.conf
-        printf '#!/bin/bash\nsource /etc/profile.d/trimangees.sh\nexec /usr/bin/trimangees-shell\n' | sudo tee build/chroot/root/.xinitrc
+        printf '[SeatDefaults]\nautologin-user=root\nautologin-user-timeout=0\nuser-session=trimangees\nautologin-session=trimangees\n\n[greeter]\nbackground=#0a0a1a\n' | sudo tee build/chroot/etc/lightdm/lightdm.conf
+        printf '#!/bin/bash\nexport DISPLAY=:0\nexport XDG_RUNTIME_DIR=/tmp/runtime-root\nexport XDG_SESSION_TYPE=x11\nmkdir -p $XDG_RUNTIME_DIR\nchmod 700 $XDG_RUNTIME_DIR\nsource /etc/profile.d/trimangees.sh\nexec /usr/bin/trimangees-shell\n' | sudo tee build/chroot/root/.xinitrc
         sudo chmod +x build/chroot/root/.xinitrc
+        printf 'root:root\n' | sudo chroot build/chroot chpasswd
+        sudo chroot build/chroot passwd -d root
 
     - name: Build ISO
       run: |
@@ -70,8 +72,3 @@ jobs:
         name: trimangees-os-iso
         path: trimangees-os.iso
         retention-days: 7
-
-
-
-
-
