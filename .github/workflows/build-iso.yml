@@ -31,6 +31,11 @@ jobs:
     - name: Install OS packages
       run: sudo chroot build/chroot apt-get update -qq && sudo chroot build/chroot apt-get install -y lightdm xorg openbox libwebkit2gtk-4.1-dev nodejs npm live-boot live-tools
 
+    - name: Install kernel
+      run: |
+        sudo chroot build/chroot apt-get install -y linux-image-amd64
+        ls build/chroot/boot/
+
     - name: Install binary and assets
       run: |
         find . -name "trimangees-shell" -type f -name "trimangees-shell" -type f | head -5 && sudo cp target/release/trimangees-shell build/chroot/usr/bin/trimangees-shell
@@ -65,6 +70,7 @@ jobs:
         name: trimangees-os-iso
         path: trimangees-os.iso
         retention-days: 7
+
 
 
 
