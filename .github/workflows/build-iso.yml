@@ -33,7 +33,7 @@ jobs:
 
     - name: Install binary and assets
       run: |
-        sudo cp shell/target/release/trimangees-shell build/chroot/usr/bin/trimangees-shell
+        find shell/target -name "trimangees-shell" -type f | head -5 && sudo cp shell/target/release/trimangees-shell build/chroot/usr/bin/trimangees-shell
         sudo chmod +x build/chroot/usr/bin/trimangees-shell
         sudo mkdir -p build/chroot/opt/trimangees
         sudo cp -r browser build/chroot/opt/trimangees/
@@ -65,3 +65,4 @@ jobs:
         name: trimangees-os-iso
         path: trimangees-os.iso
         retention-days: 7
+
