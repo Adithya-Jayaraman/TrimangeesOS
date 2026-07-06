@@ -31,7 +31,8 @@ jobs:
     - name: Install OS packages
       run: |
         sudo chroot build/chroot apt-get update -qq
-        sudo chroot build/chroot apt-get install -y lightdm lightdm-gtk-greeter xorg openbox virtualbox-guest-x11 virtualbox-guest-utils xserver-xorg-input-all xserver-xorg-video-vboxvideo libwebkit2gtk-4.1-dev nodejs npm live-boot live-tools xdg-utils
+        sudo chroot build/chroot apt-get install -y lightdm lightdm-gtk-greeter xorg openbox xserver-xorg-input-all libwebkit2gtk-4.1-dev nodejs npm live-boot live-tools xdg-utils wget gnupg
+        sudo chroot build/chroot /bin/bash -c "wget -q https://www.virtualbox.org/download/oracle_vbox_2016.asc -O- | apt-key add - && echo 'deb [arch=amd64] https://download.virtualbox.org/virtualbox/debian bookworm contrib' >> /etc/apt/sources.list && apt-get update -qq && apt-get install -y virtualbox-guest-x11"
 
     - name: Install kernel
       run: |
